@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="hyper">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kiroQuota</title>
+<link rel="stylesheet" href="themes.css">
+<link rel="stylesheet" href="global.css">
+<style>
+  :root {
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  }
+
+  html, body, #root { overflow: auto; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 13px;
+    letter-spacing: 0.01em;
+  }
+
+  /* ============ window chrome ============ */
+  .winbar {
+    height: 32px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .winbar .title { letter-spacing: 0.05em; }
+  .winbar .spacer { flex: 1; }
+  .winbar .winctrl {
+    width: 28px; height: 28px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--text2);
+    cursor: default;
+  }
+  .winbar .winctrl:hover { color: var(--text-hi); }
+  .winbar .winctrl.close:hover { color: var(--red); }
+
+  /* ============ app header ============ */
+  .appbar {
+    height: 44px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+  }
+  .brand {
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    font-size: 14px;
+    text-transform: uppercase;
+  }
+  .appbar .stat {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    letter-spacing: 0.04em;
+  }
+  .appbar .stat b {
+    color: var(--text-hi);
+    font-weight: 600;
+    margin-left: 4px;
+  }
+  .appbar .stat.warn b { color: var(--red); }
+  .appbar .stat.ok b   { color: var(--green); }
+  .appbar .spacer { flex: 1; }
+  .appbar .iconbtn {
+    width: 28px; height: 28px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text2);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: 0.12s;
+  }
+  .appbar .iconbtn:hover { color: var(--text-hi); border-color: var(--border); }
+
+  /* ============ layout ============ */
+  .shell {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: calc(100vh - 76px);
+  }
+
+  /* ============ sidebar ============ */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .side-head {
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .side-head .label {
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    font-size: 11px;
+    color: var(--text-hi);
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 7px;
+    border: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+    letter-spacing: 0.05em;
+  }
+  .pill.green { color: var(--green); border-color: color-mix(in srgb, var(--green) 50%, var(--border)); }
+  .pill.red   { color: var(--red);   border-color: color-mix(in srgb, var(--red)   50%, var(--border)); }
+  .pill.yellow{ color: var(--yellow); border-color: color-mix(in srgb, var(--yellow) 50%, var(--border)); }
+
+  .side-search {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+  }
+  .side-search input {
+    flex: 1;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    font-size: 12px;
+    outline: none;
+  }
+  .side-search input::placeholder { color: var(--muted); }
+  .side-search input:focus { border-color: var(--accent); }
+  .btn {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: 0.12s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .filters {
+    padding: 10px 14px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .filters .key {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+    letter-spacing: 0.08em;
+    margin-right: 4px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 8px;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+    transition: 0.12s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip .n {
+    font-family: var(--mono);
+    color: var(--text2);
+    font-size: 10px;
+  }
+  .chip.on { color: var(--accent); border-color: var(--accent); }
+
+  .accounts {
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .group-row {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-hi);
+    background: var(--bg1);
+  }
+  .group-row:hover { background: var(--bg2); }
+  .group-row .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--green) 70%, transparent);
+  }
+  .group-row.allerr .dot { background: var(--red); box-shadow: 0 0 6px color-mix(in srgb, var(--red) 70%, transparent); }
+  .group-row.mixed .dot  { background: var(--yellow); box-shadow: 0 0 6px color-mix(in srgb, var(--yellow) 70%, transparent); }
+  .group-row .count { color: var(--text2); margin-left: auto; }
+  .group-row .caret { color: var(--text2); width: 12px; text-align: center; }
+
+  .acct-row {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 10px;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .acct-row:hover { background: var(--bg1); }
+  .acct-row .name {
+    font-weight: 600;
+    color: var(--text-hi);
+    font-size: 13px;
+  }
+  .acct-row .sub {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text2);
+    grid-column: 1;
+    letter-spacing: 0.02em;
+  }
+  .acct-row .right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  .acct-row .ratio {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-hi);
+  }
+  .acct-row .ratio .lo { color: var(--text2); }
+  .acct-row.exhausted .ratio .hi { color: var(--red); }
+  .acct-row.active    .ratio .hi { color: var(--green); }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .badge.exhausted { color: var(--red);    border-color: color-mix(in srgb, var(--red) 50%, var(--border)); }
+  .badge.active    { color: var(--green);  border-color: color-mix(in srgb, var(--green) 50%, var(--border)); }
+  .badge.warn      { color: var(--yellow); border-color: color-mix(in srgb, var(--yellow) 50%, var(--border)); }
+
+  /* ============ main panel ============ */
+  .main {
+    padding: 20px 24px 40px;
+    overflow: auto;
+  }
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    padding: 16px 18px;
+    transition: 0.15s;
+  }
+  .stat-card:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+  .stat-card .k {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--text2);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .stat-card .v {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--text-hi);
+    line-height: 1;
+  }
+  .stat-card.ok   .v { color: var(--green); }
+  .stat-card.warn .v { color: var(--red); }
+  .stat-card .delta {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text2);
+    margin-top: 8px;
+    letter-spacing: 0.02em;
+  }
+
+  .section {
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+    background: var(--bg);
+  }
+  .section-head {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg1);
+  }
+  .section-head .title {
+    font-family: var(--mono);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-hi);
+  }
+  .section-head .spacer { flex: 1; }
+  .section-head .meta {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+    letter-spacing: 0.08em;
+  }
+
+  /* chart bars */
+  .bars { padding: 16px; }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 180px 1fr 160px;
+    gap: 14px;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 12px;
+  }
+  .bar-row .lab {
+    color: var(--text-hi);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .bar-row .lab .pip {
+    width: 6px; height: 6px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .bar-row.exhausted .lab .pip { background: var(--red); box-shadow: 0 0 5px var(--red); }
+  .bar-row.active .lab .pip { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .bar-track {
+    height: 10px;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: var(--green);
+    transition: width 0.4s;
+  }
+  .bar-row.exhausted .bar-fill { background: var(--red); }
+  .bar-row .num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    text-align: right;
+  }
+  .bar-row .num .hi { color: var(--text-hi); }
+  .bar-row.exhausted .num .hi { color: var(--red); }
+  .bar-row.active    .num .hi { color: var(--green); }
+
+  /* account grid */
+  .acct-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    padding: 16px;
+  }
+  .acct-card {
+    border: 1px solid var(--border);
+    padding: 14px;
+    background: var(--bg);
+    transition: 0.15s;
+    position: relative;
+  }
+  .acct-card:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); transform: translateY(-1px); }
+  .acct-card .top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+  .acct-card .nm {
+    font-weight: 600;
+    color: var(--text-hi);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .acct-card .nm .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 5px var(--green);
+  }
+  .acct-card.exhausted .nm .dot { background: var(--red); box-shadow: 0 0 5px var(--red); }
+  .acct-card .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 4px 0;
+    font-size: 11.5px;
+    color: var(--text2);
+    font-family: var(--mono);
+    letter-spacing: 0.02em;
+  }
+  .acct-card .row .val { color: var(--text); }
+  .acct-card .row .val.hi { color: var(--text-hi); }
+  .acct-card .progress {
+    height: 6px;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    margin: 8px 0 6px;
+    overflow: hidden;
+  }
+  .acct-card .progress > i {
+    display: block;
+    height: 100%;
+    background: var(--green);
+  }
+  .acct-card.exhausted .progress > i { background: var(--red); }
+  .acct-card .reset {
+    margin-top: 8px;
+    padding: 6px 8px;
+    border: 1px dashed color-mix(in srgb, var(--yellow) 50%, var(--border));
+    color: var(--yellow);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+  }
+
+  /* daily table */
+  table.daily {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  table.daily th, table.daily td {
+    padding: 9px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  table.daily th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text2);
+    font-weight: 600;
+    background: var(--bg1);
+  }
+  table.daily td {
+    font-family: var(--mono);
+    color: var(--text);
+  }
+  table.daily td:first-child { color: var(--text-hi); }
+  table.daily tr:hover td { background: var(--bg1); }
+  table.daily .sr-bar {
+    display: inline-block;
+    vertical-align: middle;
+    width: 80px;
+    height: 6px;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    margin-right: 8px;
+    overflow: hidden;
+  }
+  table.daily .sr-bar > i {
+    display: block;
+    height: 100%;
+    background: var(--green);
+  }
+
+  /* footer */
+  .foot {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text2);
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .foot .live {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .foot .live .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.6s infinite;
+    box-shadow: 0 0 6px var(--green);
+  }
+  .foot .live.off .dot { background: var(--red); animation: none; box-shadow: 0 0 6px var(--red); }
+  @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }
+
+  .empty {
+    padding: 60px 16px;
+    text-align: center;
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .error-box {
+    margin: 16px;
+    border: 1px solid color-mix(in srgb, var(--red) 60%, var(--border));
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--red);
+    background: color-mix(in srgb, var(--red) 6%, var(--bg));
+  }
+  .error-box code { color: var(--text-hi); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--bg2); border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--bg3); }
+</style>
+</head>
+<body>
+
+<!-- fake window bar -->
+<div class="winbar">
+  <span class="title">kiroQuota</span>
+  <span class="spacer"></span>
+  <span class="winctrl" title="pin">📌</span>
+  <span class="winctrl" title="min">─</span>
+  <span class="winctrl" title="max">▢</span>
+  <span class="winctrl close" title="close">✕</span>
+</div>
+
+<!-- app bar -->
+<div class="appbar">
+  <span class="brand">kiroQuota</span>
+  <span class="stat">Accounts:<b id="hdrTotal">—</b></span>
+  <span class="stat ok">Active:<b id="hdrActive">—</b></span>
+  <span class="stat warn">Exhausted:<b id="hdrExhausted">—</b></span>
+  <span class="stat">Avg Quota:<b id="hdrAvg">—</b></span>
+  <span class="spacer"></span>
+  <span class="stat" id="hdrUpdate">—</span>
+  <button class="iconbtn" id="refreshBtn" title="Refresh">⟳</button>
+</div>
+
+<div class="shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="side-head">
+      <span class="label">ACCOUNTS</span>
+      <span class="pill" id="sidePill">0</span>
+    </div>
+
+    <div class="side-search">
+      <input id="searchInput" placeholder="Search..." />
+      <button class="btn">+ NEW</button>
+    </div>
+
+    <div class="filters">
+      <span class="key">FILTER:</span>
+      <span class="chip" data-filter="all">all <span class="n" id="cntAll">0</span></span>
+      <span class="chip" data-filter="active">active <span class="n" id="cntActive">0</span></span>
+      <span class="chip" data-filter="exhausted">exhausted <span class="n" id="cntExh">0</span></span>
+      <span class="chip" data-filter="warn">warn <span class="n" id="cntWarn">0</span></span>
+    </div>
+
+    <div class="accounts" id="sideList">
+      <div class="empty">loading…</div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <div id="errorBox"></div>
+
+    <!-- top stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="k">TOTAL ACCOUNTS</div>
+        <div class="v" id="kpiTotal">—</div>
+        <div class="delta" id="kpiTotalSub">tracked endpoints</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="k">EXHAUSTED</div>
+        <div class="v" id="kpiExh">—</div>
+        <div class="delta" id="kpiExhSub">quota cap reached</div>
+      </div>
+      <div class="stat-card ok">
+        <div class="k">ACTIVE</div>
+        <div class="v" id="kpiActive">—</div>
+        <div class="delta" id="kpiActiveSub">available now</div>
+      </div>
+      <div class="stat-card">
+        <div class="k">AVG QUOTA</div>
+        <div class="v" id="kpiAvg">—</div>
+        <div class="delta" id="kpiAvgSub">requests / account / day</div>
+      </div>
+    </div>
+
+    <!-- quota usage -->
+    <div class="section">
+      <div class="section-head">
+        <span class="title">QUOTA USAGE</span>
+        <span class="spacer"></span>
+        <span class="meta" id="usageMeta">—</span>
+      </div>
+      <div class="bars" id="quotaChart">
+        <div class="empty">loading…</div>
+      </div>
+    </div>
+
+    <!-- account details -->
+    <div class="section">
+      <div class="section-head">
+        <span class="title">ACCOUNT DETAILS</span>
+        <span class="spacer"></span>
+        <span class="meta" id="detailMeta">—</span>
+      </div>
+      <div class="acct-grid" id="accountsGrid">
+        <div class="empty">loading…</div>
+      </div>
+    </div>
+
+    <!-- daily usage -->
+    <div class="section">
+      <div class="section-head">
+        <span class="title">DAILY USAGE TREND</span>
+        <span class="spacer"></span>
+        <span class="meta" id="dailyMeta">—</span>
+      </div>
+      <table class="daily">
+        <thead>
+          <tr>
+            <th>DATE</th>
+            <th>REQUESTS</th>
+            <th>TOKENS</th>
+            <th>ACCOUNTS</th>
+            <th>SUCCESS RATE</th>
+          </tr>
+        </thead>
+        <tbody id="dailyBody">
+          <tr><td colspan="5" class="empty" style="border:0">loading…</td></tr>
+        </tbody>
+      </table>
+      <div class="foot">
+        <span class="live" id="liveDot"><span class="dot"></span>LIVE</span>
+        <span>auto-refresh 60s</span>
+        <span class="spacer" style="flex:1"></span>
+        <span id="footUpdate">last update —</span>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  const API_BASE = 'http://localhost:20129/api';
+  let avgQuotaValue = 1115;
+  let _accounts = [];
+  let _filter = 'all';
+
+  /* ====== fake data for offline preview ====== */
+  const FAKE = {
+    summary: { total: 12, exhausted: 4, active: 8, avg_quota: 1115 },
+    accounts: [
+      { id: 'acct-001', name: 'kiro-prod-01',  total_requests: 1115, successful_requests: 1090, total_tokens: 24500000, priority: 1, last_error: 'quota_limit_exceeded', last_error_at: new Date(Date.now()-3*3600e3).toISOString() },
+      { id: 'acct-002', name: 'kiro-prod-02',  total_requests: 412,  successful_requests: 408,  total_tokens: 9800000,  priority: 1, last_error: null, last_error_at: null },
+      { id: 'acct-003', name: 'kiro-edge-eu',  total_requests: 1115, successful_requests: 1100, total_tokens: 31200000, priority: 2, last_error: 'rate_limit_exceeded', last_error_at: new Date(Date.now()-12*3600e3).toISOString() },
+      { id: 'acct-004', name: 'kiro-edge-us',  total_requests: 740,  successful_requests: 720,  total_tokens: 15300000, priority: 2, last_error: null, last_error_at: null },
+      { id: 'acct-005', name: 'kiro-bg-batch', total_requests: 1115, successful_requests: 1102, total_tokens: 41800000, priority: 3, last_error: 'quota_limit', last_error_at: new Date(Date.now()-1*3600e3).toISOString() },
+      { id: 'acct-006', name: 'kiro-fallback', total_requests: 88,   successful_requests: 86,   total_tokens: 1100000,  priority: 5, last_error: null, last_error_at: null },
+      { id: 'acct-007', name: 'kiro-shadow',   total_requests: 904,  successful_requests: 890,  total_tokens: 18800000, priority: 3, last_error: null, last_error_at: null },
+      { id: 'acct-008', name: 'kiro-dev',      total_requests: 12,   successful_requests: 12,   total_tokens: 230000,   priority: 9, last_error: null, last_error_at: null },
+      { id: 'acct-009', name: 'kiro-canary',   total_requests: 1080, successful_requests: 1015, total_tokens: 22100000, priority: 4, last_error: null, last_error_at: null },
+      { id: 'acct-010', name: 'kiro-eu-2',     total_requests: 1115, successful_requests: 1078, total_tokens: 29500000, priority: 2, last_error: 'limit', last_error_at: new Date(Date.now()-6*3600e3).toISOString() },
+      { id: 'acct-011', name: 'kiro-asia',     total_requests: 633,  successful_requests: 619,  total_tokens: 13400000, priority: 3, last_error: null, last_error_at: null },
+      { id: 'acct-012', name: 'kiro-reserve',  total_requests: 4,    successful_requests: 4,    total_tokens: 80000,    priority: 9, last_error: null, last_error_at: null },
+    ],
+    daily: [
+      { date: '2026-05-16', requests: 7820, tokens: 168000000, accounts: 12, success_rate: '98.4' },
+      { date: '2026-05-15', requests: 8412, tokens: 181000000, accounts: 12, success_rate: '97.9' },
+      { date: '2026-05-14', requests: 8104, tokens: 174000000, accounts: 12, success_rate: '98.1' },
+      { date: '2026-05-13', requests: 7733, tokens: 161000000, accounts: 12, success_rate: '99.0' },
+      { date: '2026-05-12', requests: 6905, tokens: 142000000, accounts: 12, success_rate: '98.7' },
+      { date: '2026-05-11', requests: 5210, tokens: 109000000, accounts: 11, success_rate: '99.2' },
+      { date: '2026-05-10', requests: 4988, tokens: 102000000, accounts: 11, success_rate: '98.9' },
+    ]
+  };
+
+  function isExh(acc) { return !!(acc.last_error && /limit/i.test(acc.last_error)); }
+  function nm(acc)   { return acc.name || (acc.id || '').substring(0, 8); }
+
+  function setLive(on) {
+    document.getElementById('liveDot').classList.toggle('off', !on);
+  }
+
+  function calcReset(t) {
+    if (!t) return null;
+    const reset = new Date(new Date(t).getTime() + 24*3600e3);
+    const diff = reset - new Date();
+    if (diff < 0) return 'reset ready · re-check';
+    const h = Math.floor(diff / 3600e3);
+    const m = Math.floor((diff % 3600e3) / 60e3);
+    return `reset in ~${h}h ${m}m`;
+  }
+
+  async function loadData() {
+    let summary, accounts, daily, live = true;
+    try {
+      const [s, a, d] = await Promise.all([
+        fetch(`${API_BASE}/summary`).then(r => r.json()),
+        fetch(`${API_BASE}/accounts`).then(r => r.json()),
+        fetch(`${API_BASE}/daily-usage`).then(r => r.json()),
+      ]);
+      if (!s.success || !a.success || !d.success) throw new Error('api error');
+      summary = s.data; accounts = a.data; daily = d.data;
+    } catch (err) {
+      live = false;
+      summary = FAKE.summary; accounts = FAKE.accounts; daily = FAKE.daily;
+      showError(err);
+    }
+
+    avgQuotaValue = summary.avg_quota || 1115;
+    _accounts = accounts;
+    setLive(live);
+
+    renderHeader(summary);
+    renderKPIs(summary, accounts);
+    renderSidebar(accounts);
+    renderQuotaChart(accounts);
+    renderAccountsGrid(accounts);
+    renderDaily(daily);
+
+    const now = new Date().toLocaleTimeString();
+    document.getElementById('hdrUpdate').textContent = 'updated ' + now;
+    document.getElementById('footUpdate').textContent = 'last update ' + new Date().toLocaleString();
+  }
+
+  function showError(err) {
+    const box = document.getElementById('errorBox');
+    box.innerHTML = `
+      <div class="error-box">
+        api offline · showing sample data<br/>
+        <span style="color:var(--text2)">start server with</span> <code>node kiro_dashboard_server.js</code>
+        <span style="color:var(--text2);float:right">${err.message || ''}</span>
+      </div>`;
+  }
+
+  function renderHeader(s) {
+    document.getElementById('hdrTotal').textContent = s.total;
+    document.getElementById('hdrActive').textContent = s.active;
+    document.getElementById('hdrExhausted').textContent = s.exhausted;
+    document.getElementById('hdrAvg').textContent = '~' + Number(avgQuotaValue).toLocaleString();
+  }
+
+  function renderKPIs(s, accs) {
+    document.getElementById('kpiTotal').textContent = s.total;
+    document.getElementById('kpiExh').textContent = s.exhausted;
+    document.getElementById('kpiActive').textContent = s.active;
+    document.getElementById('kpiAvg').textContent = '~' + Number(avgQuotaValue).toLocaleString();
+    const pct = s.total ? Math.round((s.active / s.total) * 100) : 0;
+    document.getElementById('kpiActiveSub').textContent = `${pct}% available`;
+    document.getElementById('kpiExhSub').textContent  = `${s.total ? Math.round(s.exhausted/s.total*100) : 0}% capped`;
+  }
+
+  function renderSidebar(accs) {
+    const list = document.getElementById('sideList');
+    const q = (document.getElementById('searchInput').value || '').toLowerCase();
+    const groups = { active: [], exhausted: [], warn: [] };
+    accs.forEach(a => {
+      const exh = isExh(a);
+      const succ = parseInt(a.successful_requests) || 0;
+      const reqs = parseInt(a.total_requests) || 0;
+      const sr = reqs ? (succ / reqs) : 1;
+      if (exh) groups.exhausted.push(a);
+      else if (sr < 0.97) groups.warn.push(a);
+      else groups.active.push(a);
+    });
+
+    document.getElementById('cntAll').textContent  = accs.length;
+    document.getElementById('cntActive').textContent = groups.active.length;
+    document.getElementById('cntExh').textContent  = groups.exhausted.length;
+    document.getElementById('cntWarn').textContent = groups.warn.length;
+    document.getElementById('sidePill').textContent = accs.length;
+
+    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.dataset.filter === _filter));
+
+    const groupsArr = [
+      { key: 'active',    label: 'ACTIVE',    list: groups.active,    cls: '' },
+      { key: 'warn',      label: 'WARN',      list: groups.warn,      cls: 'mixed' },
+      { key: 'exhausted', label: 'EXHAUSTED', list: groups.exhausted, cls: 'allerr' },
+    ];
+
+    let html = '';
+    groupsArr.forEach(g => {
+      const filtered = g.list.filter(a => !q || nm(a).toLowerCase().includes(q));
+      if (_filter !== 'all' && _filter !== g.key) return;
+      if (!filtered.length) return;
+
+      html += `
+        <div class="group-row ${g.cls}">
+          <span class="dot"></span>
+          <span>${g.label}</span>
+          <span class="count">${filtered.length}</span>
+          <span class="caret">▾</span>
+        </div>`;
+
+      filtered.forEach(a => {
+        const exh = isExh(a);
+        const reqs = parseInt(a.total_requests) || 0;
+        const succ = parseInt(a.successful_requests) || 0;
+        const sr = reqs ? ((succ/reqs)*100).toFixed(1) : '0.0';
+        const cls = exh ? 'exhausted' : 'active';
+        const badgeCls = exh ? 'exhausted' : (parseFloat(sr) < 97 ? 'warn' : 'active');
+        const badgeTxt = exh ? 'EXH' : (parseFloat(sr) < 97 ? 'WARN' : 'OK');
+        html += `
+          <div class="acct-row ${cls}">
+            <div class="name">${nm(a)}</div>
+            <div class="right">
+              <span class="badge ${badgeCls}">${badgeTxt}</span>
+              <div class="ratio"><span class="hi">${reqs.toLocaleString()}</span><span class="lo"> / ${Number(avgQuotaValue).toLocaleString()}</span></div>
+            </div>
+            <div class="sub">p${a.priority ?? '–'} · ${sr}% success · ${(((parseInt(a.total_tokens)||0))/1e6).toFixed(1)}M tok</div>
+          </div>`;
+      });
+    });
+
+    list.innerHTML = html || '<div class="empty">no accounts match</div>';
+  }
+
+  function renderQuotaChart(accs) {
+    const root = document.getElementById('quotaChart');
+    const sorted = [...accs].sort((a,b) => (parseInt(b.total_requests)||0) - (parseInt(a.total_requests)||0));
+    document.getElementById('usageMeta').textContent = `${accs.length} accounts · cap ~${Number(avgQuotaValue).toLocaleString()}`;
+    root.innerHTML = sorted.map(a => {
+      const exh = isExh(a);
+      const reqs = parseInt(a.total_requests) || 0;
+      const pct = Math.min(100, (reqs / avgQuotaValue) * 100);
+      return `
+        <div class="bar-row ${exh ? 'exhausted' : 'active'}">
+          <div class="lab"><span class="pip"></span>${nm(a)}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <div class="num"><span class="hi">${reqs.toLocaleString()}</span> / ${Number(avgQuotaValue).toLocaleString()} <span style="opacity:.7">(${pct.toFixed(1)}%)</span></div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderAccountsGrid(accs) {
+    const root = document.getElementById('accountsGrid');
+    document.getElementById('detailMeta').textContent = `${accs.length} cards`;
+    root.innerHTML = accs.map(a => {
+      const exh = isExh(a);
+      const reqs = parseInt(a.total_requests) || 0;
+      const succ = parseInt(a.successful_requests) || 0;
+      const sr = reqs ? ((succ/reqs)*100).toFixed(1) : '0.0';
+      const tok = ((parseInt(a.total_tokens) || 0) / 1e6).toFixed(1);
+      const pct = Math.min(100, (reqs / avgQuotaValue) * 100);
+      const reset = exh ? calcReset(a.last_error_at) : null;
+      return `
+        <div class="acct-card ${exh ? 'exhausted' : 'active'}">
+          <div class="top">
+            <div class="nm"><span class="dot"></span>${nm(a)}</div>
+            <span class="badge ${exh ? 'exhausted' : 'active'}">${exh ? 'EXHAUSTED' : 'ACTIVE'}</span>
+          </div>
+          <div class="row"><span>requests</span><span class="val hi">${reqs.toLocaleString()} / ${Number(avgQuotaValue).toLocaleString()}</span></div>
+          <div class="progress"><i style="width:${pct}%"></i></div>
+          <div class="row"><span>tokens</span><span class="val">${tok}M</span></div>
+          <div class="row"><span>success</span><span class="val">${sr}%</span></div>
+          <div class="row"><span>priority</span><span class="val">p${a.priority ?? '–'}</span></div>
+          ${reset ? `<div class="reset">⏰ ${reset}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function renderDaily(rows) {
+    const tb = document.getElementById('dailyBody');
+    document.getElementById('dailyMeta').textContent = `${rows.length} days`;
+    if (!rows.length) {
+      tb.innerHTML = '<tr><td colspan="5" class="empty" style="border:0">no data</td></tr>';
+      return;
+    }
+    tb.innerHTML = rows.map(d => {
+      const sr = parseFloat(d.success_rate) || 0;
+      return `
+        <tr>
+          <td>${d.date}</td>
+          <td>${parseInt(d.requests).toLocaleString()}</td>
+          <td>${(parseInt(d.tokens)/1e6).toFixed(1)}M</td>
+          <td>${d.accounts}</td>
+          <td><span class="sr-bar"><i style="width:${sr}%"></i></span>${sr.toFixed(1)}%</td>
+        </tr>`;
+    }).join('');
+  }
+
+  /* events */
+  document.getElementById('refreshBtn').addEventListener('click', loadData);
+  document.getElementById('searchInput').addEventListener('input', () => renderSidebar(_accounts));
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => { _filter = c.dataset.filter; renderSidebar(_accounts); });
+  });
+
+  setInterval(loadData, 60000);
+  loadData();
+</script>
+</body>
+</html>
