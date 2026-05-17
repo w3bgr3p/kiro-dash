@@ -5,44 +5,81 @@
 ## 📁 Файлы
 
 ### Скрипты анализа:
-- **`analyze_kiro_quotas_simple.sh`** - Простой bash скрипт для анализа квот
-- **`analyze_kiro_quotas.sh`** - Детальная версия с дополнительной статистикой
-- **`analyze_kiro_quotas.js`** - Node.js версия (требует `npm install sqlite3`)
+- **`analyze_kiro_quotas.js`** - Node.js скрипт для детального анализа квот (требует `npm install sqlite3`)
 
 ### Dashboard:
-- **`kiro_quota_dashboard.html`** - Статический dashboard (работает с OmniRoute API)
-- **`kiro_quota_dashboard_v2.html`** - Улучшенный dashboard с реальными данными
-- **`kiro_dashboard_server.js`** - API сервер для dashboard (Node.js)
+- **`Kiro Quota Dashboard.html`** - Интерактивный dashboard с реальными данными
+- **`kiro_dashboard_server.js`** - API сервер для dashboard (Node.js, без зависимостей)
+- **`themes.css`** - Темы оформления dashboard
+- **`global.css`** - Глобальные стили
+
+### Лаунчеры:
+- **`start_kiro_dashboard.sh`** - Запуск для Linux/macOS/Unix
+- **`start_kiro_dashboard.bat`** - Запуск для Windows
 
 ## 🚀 Быстрый старт
 
-### Вариант 1: Bash скрипт (самый простой)
+### Вариант 1: Автоматический запуск (рекомендуется)
+
+#### Windows:
+```cmd
+start_kiro_dashboard.bat
+```
+
+#### Linux/macOS:
+```bash
+bash start_kiro_dashboard.sh
+```
+
+Скрипт автоматически запустит API сервер и откроет dashboard в браузере.
+
+### Вариант 2: Node.js анализ (консоль)
 
 ```bash
-bash ~/analyze_kiro_quotas_simple.sh
+node analyze_kiro_quotas.js
 ```
 
 **Вывод:**
 ```
-🔍 Kiro Quota Analysis Report
+🔍 Kiro Quota Analysis
 ================================================================================
-Total Accounts: 19
-Exhausted: 18
+Total Accounts: 20
+Exhausted: 19
 Active: 1
 
 💰 ESTIMATED QUOTA LIMITS
-Average Requests: 1,115
+Average Requests: 1,076
 Average Tokens: 39,395,510
 
 🔥 TOP 10 EXHAUSTED ACCOUNTS
 ...
 ```
 
-### Вариант 2: Web Dashboard с API сервером
+### Вариант 3: Web Dashboard с API сервером (ручной запуск)
+
+#### Windows:
+```cmd
+start_kiro_dashboard.bat
+```
+
+#### Linux/macOS:
+```bash
+bash start_kiro_dashboard.sh
+```
+
+Скрипт автоматически:
+- Проверит установку Node.js
+- Проверит наличие БД OmniRoute
+- Запустит API сервер на порту 20129
+- Откроет dashboard в браузере
+
+Dashboard автоматически обновляется каждые 60 секунд.
+
+#### Ручной запуск:
 
 1. **Запустите API сервер:**
 ```bash
-node ~/kiro_dashboard_server.js
+node kiro_dashboard_server.js
 ```
 
 Вывод:
@@ -57,16 +94,19 @@ node ~/kiro_dashboard_server.js
 
 2. **Откройте dashboard в браузере:**
 ```bash
-start ~/kiro_quota_dashboard_v2.html
-# или
-open ~/kiro_quota_dashboard_v2.html  # macOS
+# Windows
+start "Kiro Quota Dashboard.html"
+
+# macOS
+open "Kiro Quota Dashboard.html"
+
+# Linux
+xdg-open "Kiro Quota Dashboard.html"
 ```
 
-Dashboard автоматически обновляется каждые 60 секунд.
+### Вариант 4: Статический dashboard (без API сервера)
 
-### Вариант 3: Статический dashboard (без API сервера)
-
-Просто откройте `kiro_quota_dashboard.html` в браузере. Он будет использовать OmniRoute API напрямую (порт 20128).
+Просто откройте `Kiro Quota Dashboard.html` в браузере. Он будет использовать OmniRoute API напрямую (порт 20128).
 
 ## 📊 Что показывает dashboard
 
@@ -93,15 +133,15 @@ Dashboard автоматически обновляется каждые 60 се
 ## 🔍 Основные выводы из анализа
 
 ### Расчетная квота на аккаунт:
-- **Средняя:** ~1,115 запросов
+- **Средняя:** ~1,076 запросов
 - **Медиана:** ~630 запросов
 - **Средние токены:** ~39.4M токенов
 
 ### Текущая ситуация (2026-05-17):
-- ❌ **18 из 19** аккаунтов исчерпаны (95%)
+- ❌ **19 из 20** аккаунтов исчерпаны (95%)
 - ✅ **1 активный** аккаунт
-- 📊 **Использовано:** ~244 запроса из ~1,115
-- ⏰ **Оставшаяся емкость:** ~871 запрос
+- 📊 **Использовано:** ~244 запроса из ~1,076
+- ⏰ **Оставшаяся емкость:** ~832 запроса
 
 ### Предполагаемое время сброса квот:
 
@@ -187,45 +227,47 @@ Dashboard автоматически обновляется каждые 60 се
 ## 💡 Рекомендации
 
 ### Критическая ситуация:
-⚠️ **18 из 19 аккаунтов исчерпаны!**
+⚠️ **19 из 20 аккаунтов исчерпаны!**
 
 **Действия:**
 1. ✅ Добавить больше Kiro аккаунтов
 2. ✅ Включить rate limit protection в OmniRoute
 3. ✅ Использовать OpenRouter как fallback провайдер
-4. ✅ Мониторить активный аккаунт (осталось ~871 запрос)
+4. ✅ Мониторить активный аккаунт (осталось ~832 запроса)
 
 ### Автоматизация мониторинга:
 
-Добавьте в cron для регулярной проверки:
+#### Windows (Task Scheduler):
+Создайте задачу в планировщике заданий для регулярной проверки каждые 30 минут.
+
+#### Linux/macOS (cron):
 ```bash
 # Проверка каждые 30 минут
-*/30 * * * * bash ~/analyze_kiro_quotas_simple.sh > ~/kiro_quota_report.txt
+*/30 * * * * cd /path/to/kiroboard && node analyze_kiro_quotas.js > ~/kiro_quota_report.txt
 ```
 
-Или запустите dashboard сервер как systemd service (Linux) или через PM2:
+#### PM2 (кросс-платформенно):
 ```bash
-pm2 start ~/kiro_dashboard_server.js --name kiro-dashboard
+pm2 start kiro_dashboard_server.js --name kiro-dashboard
 pm2 save
 pm2 startup
 ```
 
 ## 🔧 Требования
 
-### Для bash скриптов:
-- `bash`
-- `sqlite3` CLI
-- OmniRoute установлен в `~/.omniroute/`
-
-### Для Node.js версий:
+### Для автоматического запуска:
 - Node.js v14+
-- Для `analyze_kiro_quotas.js`: `npm install sqlite3`
-- Для `kiro_dashboard_server.js`: только встроенные модули
+- OmniRoute установлен в `~/.omniroute/` (Windows: `%USERPROFILE%\.omniroute\`)
+- Современный браузер (Chrome, Firefox, Safari, Edge)
+
+### Для Node.js анализа:
+- Node.js v14+
+- `npm install sqlite3` (только для analyze_kiro_quotas.js)
 
 ### Для dashboard:
 - Современный браузер (Chrome, Firefox, Safari, Edge)
 - OmniRoute запущен (для прямого подключения)
-- Или API сервер запущен (для версии v2)
+- Или API сервер запущен (для версии с API)
 
 ## 📝 Примечания
 
